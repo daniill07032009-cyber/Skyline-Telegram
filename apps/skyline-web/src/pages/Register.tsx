@@ -69,51 +69,22 @@ export default function Register() {
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setError('');
-
-    const verifiedToken = sessionStorage.getItem('verifiedEmailToken');
-    const verifiedEmail = sessionStorage.getItem('verifiedEmailAddress');
-    if (verifiedToken && verifiedEmail && verifiedEmail.toLowerCase() === email.trim().toLowerCase()) {
-      setLoading(true);
-      try {
-        await register(email.trim(), password, username.trim(), verifiedToken);
-        sessionStorage.removeItem('verifiedEmailToken');
-        sessionStorage.removeItem('verifiedEmailAddress');
-        const redirectPath = sessionStorage.getItem('skylineAfterLogin');
-        sessionStorage.removeItem('skylineAfterLogin');
-        navigate(redirectPath || '/', { replace: true });
-        return;
-      } catch (registrationError: unknown) {
-        sessionStorage.removeItem('verifiedEmailToken');
-        sessionStorage.removeItem('verifiedEmailAddress');
-        const data = isAxiosError(registrationError)
-          ? registrationError.response?.data as { detail?: string; error?: string } | undefined
-          : undefined;
-        setError(data?.detail || data?.error || 'Не удалось завершить регистрацию. Проверьте данные и попробуйте ещё раз.');
-        return;
-      } finally {
-        setLoading(false);
-      }
-    }
-
     setLoading(true);
-    try {
-      sessionStorage.setItem('pendingRegistration', JSON.stringify({
-        email: email.trim(),
-        username: username.trim(),
-        password,
-      }));
 
-      const res = await authApi.sendEmailCode(email.trim());
-      setSecondsRemaining(res.data.expiresInSeconds || 600);
-      setVerificationError('');
-      setVerificationCode('');
-      setVerificationNotice(`Письмо со ссылкой для подтверждения отправлено на ${email.trim()}. Введите код из письма или перейдите по ссылке в нём.`);
-      setVerificationOpen(true);
-    } catch (sendError: unknown) {
-      const data = isAxiosError(sendError)
-        ? sendError.response?.data as { detail?: string; error?: string } | undefined
+    const verifiedToken = sessionStorage.getItem('verifiedEmailToken') || undefined;
+    try {
+      await register(email.trim(), password, username.trim(), verifiedToken);
+      sessionStorage.removeItem('pendingRegistration');
+      sessionStorage.removeItem('verifiedEmailToken');
+      sessionStorage.removeItem('verifiedEmailAddress');
+      const redirectPath = sessionStorage.getItem('skylineAfterLogin');
+      sessionStorage.removeItem('skylineAfterLogin');
+      navigate(redirectPath || '/', { replace: true });
+    } catch (registrationError: unknown) {
+      const data = isAxiosError(registrationError)
+        ? registrationError.response?.data as { detail?: string; error?: string } | undefined
         : undefined;
-      setError(data?.detail || data?.error || 'Не удалось отправить код подтверждения. Попробуйте ещё раз.');
+      setError(data?.detail || data?.error || 'Не удалось создать аккаунт. Проверьте данные и попробуйте ещё раз.');
     } finally {
       setLoading(false);
     }
@@ -222,7 +193,7 @@ export default function Register() {
               onChange={(event) => setPassword(event.target.value)}
               autoComplete="new-password"
               required
-              placeholder="Минимум 6 символов"
+              placeholder="Минимум 8 символов"
             />
             <Button type="submit" disabled={loading || !email.trim() || !password || !username.trim()} className="mt-2">
               {loading ? 'Создаем…' : <>Зарегистрироваться <ArrowRight size={16} /></>}
