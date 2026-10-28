@@ -243,16 +243,12 @@ public final class SkylineApiClient implements AutoCloseable {
         execute("POST", "/channels", payload, requireToken(bearerToken), callback);
     }
 
-    public void getChannelPosts(String channelId, int limit, String beforeId,
-                                String bearerToken, Callback callback) {
+    public void getChannelPosts(String channelId, int limit, String bearerToken, Callback callback) {
         if (callback == null || !hasToken(bearerToken, callback)) return;
         try {
             String channel = URLEncoder.encode(requireText(channelId, "channel id"), "UTF-8");
             int safeLimit = Math.max(1, Math.min(limit, 100));
             String path = "/channels/" + channel + "/posts?limit=" + safeLimit;
-            if (beforeId != null && !beforeId.trim().isEmpty()) {
-                path += "&before=" + URLEncoder.encode(beforeId.trim(), "UTF-8");
-            }
             execute("GET", path, null, requireToken(bearerToken), callback);
         } catch (Exception exception) {
             callback.onError(0, exception.getMessage() == null ? "Invalid channel request" : exception.getMessage());
