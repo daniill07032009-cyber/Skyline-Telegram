@@ -108,11 +108,13 @@ public final class SkylineApiClient implements AutoCloseable {
 
     /** Returns the user's direct-chat list. Array responses are exposed as body.items. */
     public void getContacts(String bearerToken, Callback callback) {
+        if (!hasToken(bearerToken, callback)) return;
         execute("GET", "/contacts", null, requireToken(bearerToken), callback);
     }
 
     /** Partial username/display-name search; the backend applies its own result limit. */
     public void searchUsers(String query, String bearerToken, Callback callback) {
+        if (!hasToken(bearerToken, callback)) return;
         try {
             String encoded = URLEncoder.encode(query == null ? "" : query.trim(), "UTF-8");
             execute("GET", "/users/search?q=" + encoded, null, requireToken(bearerToken), callback);
@@ -123,6 +125,7 @@ public final class SkylineApiClient implements AutoCloseable {
 
     /** Fetches a direct conversation. The server returns encrypted message envelopes. */
     public void getDirectMessages(String peerUserId, int limit, String beforeId, String bearerToken, Callback callback) {
+        if (!hasToken(bearerToken, callback)) return;
         try {
             String peer = requireText(peerUserId, "peer user id");
             int safeLimit = Math.max(1, Math.min(limit, 100));
@@ -141,6 +144,7 @@ public final class SkylineApiClient implements AutoCloseable {
      * to this method; the server rejects unencrypted direct-message payloads.
      */
     public void sendEncryptedDirectMessage(String receiverId, String encryptedEnvelope, String replyTo,
+        if (!hasToken(bearerToken, callback)) return;
                                            String bearerToken, Callback callback) {
         JSONObject payload = new JSONObject();
         try {
@@ -159,10 +163,12 @@ public final class SkylineApiClient implements AutoCloseable {
 
     /** Lists groups for the current Skyline account. */
     public void getGroups(String bearerToken, Callback callback) {
+        if (!hasToken(bearerToken, callback)) return;
         execute("GET", "/groups", null, requireToken(bearerToken), callback);
     }
 
     public void createGroup(String title, String description, JSONArray memberIds,
+        if (!hasToken(bearerToken, callback)) return;
                             String bearerToken, Callback callback) {
         JSONObject payload = new JSONObject();
         try {
@@ -177,6 +183,7 @@ public final class SkylineApiClient implements AutoCloseable {
     }
 
     public void getGroupMessages(String groupId, int limit, String beforeId,
+        if (!hasToken(bearerToken, callback)) return;
                                  String bearerToken, Callback callback) {
         try {
             String group = requireText(groupId, "group id");
@@ -193,6 +200,7 @@ public final class SkylineApiClient implements AutoCloseable {
 
     /** Sends an already-encrypted envelope to a Skyline group. */
     public void sendEncryptedGroupMessage(String groupId, String encryptedEnvelope,
+        if (!hasToken(bearerToken, callback)) return;
                                           String bearerToken, Callback callback) {
         JSONObject payload = new JSONObject();
         try {
@@ -202,7 +210,21 @@ public final class SkylineApiClient implements AutoCloseable {
             callback.onError(0, exception.getMessage());
             return;
         }
-        execute("POST", "/groups/" + groupId + "/messages", payload, requireToken(bearerToken), callback);
+        try {
+            String group = URLEncoder.encode(requireText(groupId, "group id"), "UTF-8");
+            execute("POST", "/groups/" + group + "/messages", payload, requireToken(bearerToken), callback);
+        } catch (Exception exception) {
+            callback.onError(0, exception.getMessage() == null ? "Invalid group request" : exception.getMessage());
+        }
+    }
+
+    private boolean hasToken(String bearerToken, Callback callback) {
+        if (callback == null) return false;
+        if (bearerToken == null || bearerToken.trim().isEmpty()) {
+            callback.onError(0, "Skyline session token is required");
+            return false;
+        }
+        return true;
     }
 
     private String requireToken(String bearerToken) {
