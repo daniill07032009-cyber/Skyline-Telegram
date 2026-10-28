@@ -64,6 +64,7 @@ public final class SkylineApiClient implements AutoCloseable {
             String verificationToken,
             Callback callback
     ) {
+        if (callback == null) return;
         JSONObject payload = new JSONObject();
         try {
             payload.put("username", requireText(username, "username"));
@@ -81,6 +82,7 @@ public final class SkylineApiClient implements AutoCloseable {
 
     /** Login with either username or email, matching Skyline's current API contract. */
     public void login(String identifier, String password, Callback callback) {
+        if (callback == null) return;
         JSONObject payload = new JSONObject();
         String cleanIdentifier;
         try {
@@ -99,6 +101,7 @@ public final class SkylineApiClient implements AutoCloseable {
     }
 
     public void getCurrentUser(String bearerToken, Callback callback) {
+        if (callback == null) return;
         if (bearerToken == null || bearerToken.trim().isEmpty()) {
             callback.onError(0, "Skyline session token is required");
             return;
@@ -108,13 +111,13 @@ public final class SkylineApiClient implements AutoCloseable {
 
     /** Returns the user's direct-chat list. Array responses are exposed as body.items. */
     public void getContacts(String bearerToken, Callback callback) {
-        if (!hasToken(bearerToken, callback)) return;
+        if (callback == null || !hasToken(bearerToken, callback)) return;
         execute("GET", "/contacts", null, requireToken(bearerToken), callback);
     }
 
     /** Partial username/display-name search; the backend applies its own result limit. */
     public void searchUsers(String query, String bearerToken, Callback callback) {
-        if (!hasToken(bearerToken, callback)) return;
+        if (callback == null || !hasToken(bearerToken, callback)) return;
         try {
             String encoded = URLEncoder.encode(query == null ? "" : query.trim(), "UTF-8");
             execute("GET", "/users/search?q=" + encoded, null, requireToken(bearerToken), callback);
@@ -125,7 +128,7 @@ public final class SkylineApiClient implements AutoCloseable {
 
     /** Fetches a direct conversation. The server returns encrypted message envelopes. */
     public void getDirectMessages(String peerUserId, int limit, String beforeId, String bearerToken, Callback callback) {
-        if (!hasToken(bearerToken, callback)) return;
+        if (callback == null || !hasToken(bearerToken, callback)) return;
         try {
             String peer = requireText(peerUserId, "peer user id");
             int safeLimit = Math.max(1, Math.min(limit, 100));
@@ -145,7 +148,7 @@ public final class SkylineApiClient implements AutoCloseable {
      */
     public void sendEncryptedDirectMessage(String receiverId, String encryptedEnvelope, String replyTo,
                                            String bearerToken, Callback callback) {
-        if (!hasToken(bearerToken, callback)) return;
+        if (callback == null || !hasToken(bearerToken, callback)) return;
         JSONObject payload = new JSONObject();
         try {
             payload.put("receiverId", requireText(receiverId, "receiver id"));
