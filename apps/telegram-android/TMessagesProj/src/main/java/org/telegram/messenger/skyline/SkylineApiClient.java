@@ -166,13 +166,13 @@ public final class SkylineApiClient implements AutoCloseable {
 
     /** Lists groups for the current Skyline account. */
     public void getGroups(String bearerToken, Callback callback) {
-        if (!hasToken(bearerToken, callback)) return;
+        if (callback == null || !hasToken(bearerToken, callback)) return;
         execute("GET", "/groups", null, requireToken(bearerToken), callback);
     }
 
     public void createGroup(String title, String description, JSONArray memberIds,
                             String bearerToken, Callback callback) {
-        if (!hasToken(bearerToken, callback)) return;
+        if (callback == null || !hasToken(bearerToken, callback)) return;
         JSONObject payload = new JSONObject();
         try {
             payload.put("title", requireText(title, "group title"));
@@ -187,7 +187,7 @@ public final class SkylineApiClient implements AutoCloseable {
 
     public void getGroupMessages(String groupId, int limit, String beforeId,
                                  String bearerToken, Callback callback) {
-        if (!hasToken(bearerToken, callback)) return;
+        if (callback == null || !hasToken(bearerToken, callback)) return;
         try {
             String group = requireText(groupId, "group id");
             int safeLimit = Math.max(1, Math.min(limit, 100));
@@ -204,7 +204,7 @@ public final class SkylineApiClient implements AutoCloseable {
     /** Sends an already-encrypted envelope to a Skyline group. */
     public void sendEncryptedGroupMessage(String groupId, String encryptedEnvelope,
                                           String bearerToken, Callback callback) {
-        if (!hasToken(bearerToken, callback)) return;
+        if (callback == null || !hasToken(bearerToken, callback)) return;
         JSONObject payload = new JSONObject();
         try {
             payload.put("text", requireText(encryptedEnvelope, "encrypted envelope"));
