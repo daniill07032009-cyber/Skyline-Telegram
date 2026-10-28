@@ -1,10 +1,6 @@
 name: Skyline multi-platform CI
 
 on:
-  push:
-    branches:
-      - main
-      - integration/telegram-skyline-foundation
   pull_request:
     branches:
       - main
