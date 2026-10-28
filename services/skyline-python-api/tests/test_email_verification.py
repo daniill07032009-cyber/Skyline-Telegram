@@ -5,7 +5,6 @@ from unittest.mock import MagicMock, Mock, patch
 
 from bson import ObjectId
 from fastapi import HTTPException
-from pydantic import ValidationError
 
 import main
 
@@ -193,26 +192,48 @@ class EmailVerificationTests(unittest.TestCase):
             verificationToken="one-time-registration-token-1234567890",
         )
 
+        request = Mock(client=Mock(host="127.0.0.1"))
         with (
             patch("main.users_collection", return_value=users),
             patch("main.verified_email_tokens_collection", return_value=verified_tokens),
             patch("main.hash_password", return_value="password-hash"),
             patch("main.create_token", return_value="auth-token"),
         ):
-            response = main.register(payload)
+            response = main.register(payload, request)
 
         self.assertTrue(response["user"]["isEmailVerified"])
         self.assertEqual(response["user"]["email"], "person@example.com")
         self.assertTrue(users.insert_one.call_args.args[0]["isEmailVerified"])
         verified_tokens.find_one_and_delete.assert_called_once()
 
-    def test_register_requires_a_verification_token(self) -> None:
-        with self.assertRaises(ValidationError):
-            main.RegisterRequest(
-                email="person@example.com",
-                password="password123",
-                username="person_one",
-            )
+    def test_register_allows_unverified_email_when_token_is_omitted(self) -> None:
+        users = Mock()
+        users.find_one.return_value = None
+        users.insert_one.return_value.inserted_id = ObjectId(USER_ID)
+        request = Mock(client=Mock(host="127.0.0.2"))
+        payload = main.RegisterRequest(
+            email="person@example.com",
+            password="password123",
+            username="person_two",
+        )
+
+        with (
+            patch("main.users_collection", return_value=users),
+            patch("main.verified_email_tokens_collection") as verified_tokens,
+            patch("main.hash_password", return_value="password-hash"),
+            patch("main.create_token", return_value="auth-token"),
+        ):
+            response = main.register(payload, request)
+
+        self.assertFalse(response["user"]["isEmailVerified"])
+        self.assertFalse(users.insert_one.call_args.args[0]["isEmailVerified"])
+        verified_tokens.assert_not_called()
+
+    def test_login_request_accepts_username_or_email(self) -> None:
+        username_login = main.LoginRequest(username="person_one", password="password123")
+        email_login = main.LoginRequest(email="person@example.com", password="password123")
+        self.assertEqual(username_login.username, "person_one")
+        self.assertEqual(str(email_login.email), "person@example.com")
 
 
 if __name__ == "__main__":
