@@ -4,7 +4,7 @@ This is the implementation checklist. Status is **Not started** until code is co
 
 | Area | Required Skyline integration | Status |
 |---|---|---|
-| Account and sessions | Skyline registration/login, token/session persistence, logout, multi-device sessions | Not started |
+| Account and sessions | Skyline registration/login without mandatory email/phone verification, token/session persistence, logout, multi-device sessions | Not started |
 | Chat list | Direct/group/channel conversations, ordering, unread counts, drafts, archive and pinned chats | Not started |
 | Text messages | Send/receive, history pagination, edits, deletes, replies, forwarding, reactions and read state | Not started |
 | Realtime | Authenticated socket connection, reconnect, event deduplication and offline recovery | Not started |
@@ -17,7 +17,7 @@ This is the implementation checklist. Status is **Not started** until code is co
 | Calls | Call signaling, TURN/STUN/media infrastructure, permissions, lifecycle and reconnect | Not started |
 | Contacts and profile | Skyline user IDs, usernames, avatars, privacy and blocking | Not started |
 | Bots and automation | Skyline-owned bot API/runtime; do not point Telegram bot functions at Telegram servers | Not started |
-| Secret chats | Separate cryptographic protocol, key lifecycle, identity verification and security review | Not started |
+| Secret chats | Separate E2E protocol, key lifecycle, identity verification and security review | Design approved; implementation not started |
 | Web parity | Shared Skyline identity and data contracts; verify browser and Android sessions against the same backend | Not started |
 
 ## Scope rule
