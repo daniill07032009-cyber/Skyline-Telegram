@@ -84,6 +84,8 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+      - name: Configure Gradle and restore build cache
+        uses: gradle/actions/setup-gradle@v4
       - name: Install Android SDK and NDK components
         shell: bash
         run: |
@@ -115,7 +117,7 @@ jobs:
               -dname "CN=Android Debug,O=Android,C=US" -noprompt
           fi
       - name: Compile upstream baseline debug APK
-        run: ./gradlew --no-daemon --stacktrace :TMessagesProj_App:assembleAfatDebug
+        run: ./gradlew --no-daemon --parallel --build-cache -PskylineCiPhoneAbis=true --stacktrace :TMessagesProj_App:assembleAfatDebug
       - uses: actions/upload-artifact@v4
         if: success()
         with:
