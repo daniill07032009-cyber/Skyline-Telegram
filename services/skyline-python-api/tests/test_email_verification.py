@@ -235,6 +235,34 @@ class EmailVerificationTests(unittest.TestCase):
         self.assertEqual(username_login.username, "person_one")
         self.assertEqual(str(email_login.email), "person@example.com")
 
+    def test_login_authenticates_by_username(self) -> None:
+        users = Mock()
+        users.find_one.return_value = {
+            "_id": ObjectId(USER_ID),
+            "email": "person@example.com",
+            "username": "person_one",
+            "passwordHash": "password-hash",
+            "displayName": "Person One",
+        }
+        request = Mock(client=Mock(host="127.0.0.4"), headers={"user-agent": "Skyline CI"})
+        with (
+            patch("main.users_collection", return_value=users),
+            patch("main.verify_password", return_value=True),
+            patch("main.create_token", return_value="auth-token"),
+            patch("main.login_history_collection") as history,
+        ):
+            response = main.login(
+                main.LoginRequest(username="person_one", password="password123"),
+                request,
+            )
+
+        self.assertEqual(response["token"], "auth-token")
+        self.assertEqual(response["user"]["username"], "person_one")
+        users.find_one.assert_called_once_with({
+            "$or": [{"email": "person_one"}, {"username": "person_one"}],
+        })
+        history.return_value.insert_one.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()
