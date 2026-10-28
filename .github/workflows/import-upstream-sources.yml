@@ -2,6 +2,11 @@ name: Import upstream source trees
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - integration/telegram-skyline-foundation
+    paths:
+      - '.github/workflows/import-upstream-sources.yml'
 
 permissions:
   contents: write
