@@ -28,7 +28,7 @@ export default function Login() {
       const data = isAxiosError(loginError)
         ? loginError.response?.data as { detail?: string; error?: string } | undefined
         : undefined;
-      setError(data?.detail || data?.error || 'Не удалось войти. Проверьте email и пароль.');
+      setError(data?.detail || data?.error || 'Не удалось войти. Проверьте имя пользователя или почту и пароль.');
     } finally {
       setLoading(false);
     }
@@ -57,14 +57,14 @@ export default function Login() {
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <Input
-              type="email"
-              label="Электронная почта"
+              type="text"
+              label="Имя пользователя или почта"
               icon={<Mail size={14} className="text-t-secondary" />}
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              autoComplete="email"
+              autoComplete="username"
               required
-              placeholder="name@example.com"
+              placeholder="username или name@example.com"
             />
             <Input
               type="password"
