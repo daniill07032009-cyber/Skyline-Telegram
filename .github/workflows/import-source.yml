@@ -28,13 +28,26 @@ jobs:
         with:
           ref: integration/telegram-skyline-foundation
           fetch-depth: 1
+      - name: Detect already-imported source trees
+        id: existing
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f apps/telegram-android/TMessagesProj/build.gradle && -f apps/skyline-web/package.json && -f services/skyline-node-api/package.json && -f services/skyline-python-api/main.py ]]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+            echo "Source trees are already present; import is not needed."
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Check import destinations
+        if: steps.existing.outputs.present != 'true'
         run: |
           set -euo pipefail
           for path in apps/telegram-android apps/skyline-web services/skyline-api-node services/skyline-api-python; do
             if [ -e "$path" ]; then echo "Refusing to overwrite existing path: $path"; exit 1; fi
           done
       - name: Clone source repositories
+        if: steps.existing.outputs.present != 'true'
         run: |
           set -euo pipefail
           git clone --depth 1 https://github.com/TelegramOrg/Telegram-Android.git /tmp/telegram-android
@@ -42,6 +55,7 @@ jobs:
           git -C /tmp/telegram-android rev-parse HEAD | tee /tmp/telegram-android-commit.txt
           git -C /tmp/skyline rev-parse HEAD | tee /tmp/skyline-commit.txt
       - name: Copy sources without overwriting project docs
+        if: steps.existing.outputs.present != 'true'
         run: |
           set -euo pipefail
           mkdir -p apps/telegram-android apps/skyline-web services/skyline-api-node services/skyline-api-python docs/source-import
@@ -53,6 +67,7 @@ jobs:
           cp /tmp/telegram-android/LICENSE* docs/source-import/ 2>/dev/null || true
           cp /tmp/skyline/LICENSE* docs/source-import/ 2>/dev/null || true
       - name: Record import manifest
+        if: steps.existing.outputs.present != 'true'
         run: |
           set -euo pipefail
           cat > docs/source-import/README.md <<'EOF'
@@ -68,6 +83,7 @@ jobs:
           Review all upstream license notices and distribution obligations before publishing builds.
           EOF
       - name: Commit imported source
+        if: steps.existing.outputs.present != 'true'
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
@@ -76,3 +92,6 @@ jobs:
           if git diff --cached --quiet; then echo 'No source changes to commit'; exit 1; fi
           git commit -m 'build: import Telegram Android and Skyline source trees'
           git push origin HEAD:integration/telegram-skyline-foundation
+      - name: Report existing source trees
+        if: steps.existing.outputs.present == 'true'
+        run: echo "Telegram Android and Skyline source trees are already imported; no changes made."
