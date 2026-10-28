@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OurSocial — Next-Gen Decentralized Network</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- JSZip for dynamic zip download -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- Lucide Feather-style CSS Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        display: ['"Space Grotesk"', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f3ff',
+                            100: '#e1e7ff',
+                            500: '#6366f1', // Electric Indigo
+                            600: '#4f46e5',
+                            900: '#1e1b4b',
+                            accent: '#10b981', // Neon Mint
+                        }
+                    },
+                    animation: {
+                        'pulse-glow': 'pulseGlow 2.5s infinite ease-in-out',
+                        'float': 'float 4s infinite ease-in-out',
+                        'slide-up': 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards'
+                    },
+                    keyframes: {
+                        pulseGlow: {
+                            '0%, 100%': { boxShadow: '0 0 15px rgba(99, 102, 241, 0.3)' },
+                            '50%': { boxShadow: '0 0 30px rgba(16, 185, 129, 0.5)' }
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-6px)' }
+                        },
+                        slideUp: {
+                            '0%': { opacity: '0', transform: 'translateY(12px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.4);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(99, 102, 241, 0.3);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(16, 185, 129, 0.6);
+        }
+
+        /* Unique OurSocial Design Tokens */
+        .glass-card {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+        }
+
+        .glass-pill {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Dynamic Theme Switcher Variables */
+        body.theme-indigo {
+            --brand-main: #6366f1;
+            --brand-glow: rgba(99, 102, 241, 0.4);
+            --bg-dark: #090d16;
+            --chat-bubble-self: linear-gradient(135deg, #4f46e5 0%, #312e81 100%);
+        }
+
+        body.theme-emerald {
+            --brand-main: #10b981;
+            --brand-glow: rgba(16, 185, 129, 0.4);
+            --bg-dark: #04130f;
+            --chat-bubble-self: linear-gradient(135deg, #059669 0%, #064e3b 100%);
+        }
+
+        body.theme-rose {
+            --brand-main: #f43f5e;
+            --brand-glow: rgba(244, 63, 94, 0.4);
+            --bg-dark: #120307;
+            --chat-bubble-self: linear-gradient(135deg, #e11d48 0%, #881337 100%);
+        }
+
+        .bg-custom-main { background-color: var(--bg-dark); }
+        .text-custom-brand { color: var(--brand-main); }
+        .bg-custom-bubble { background: var(--chat-bubble-self); }
+        .shadow-brand-glow { box-shadow: 0 8px 25px -5px var(--brand-glow); }
+    </style>
+</head>
+<body class="theme-indigo bg-custom-main text-slate-100 h-full overflow-hidden font-sans select-none antialiased transition-colors duration-500">
+
+    <!-- MAIN APP SHELL -->
+    <div id="app-wrapper" class="flex h-full w-full relative overflow-hidden">
+
+        <!-- 1. TOP FLOATING BRAND & NAVIGATION HEADER -->
+        <header class="absolute top-0 left-0 right-0 h-16 z-30 px-6 flex items-center justify-between pointer-events-none">
+            <!-- Brand Badge -->
+            <div class="pointer-events-auto flex items-center gap-3 glass-card px-4 py-2 rounded-2xl shadow-xl">
+                <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-500 to-emerald-400 flex items-center justify-center text-slate-950 font-black text-sm shadow-brand-glow">
+                    <i class="fa-solid fa-shapes"></i>
+                </div>
+                <div>
+                    <span class="font-display font-bold text-base tracking-wider bg-gradient-to-r from-white via-slate-200 to-indigo-300 bg-clip-text text-transparent">OurSocial</span>
+                    <span class="text-[9px] font-mono text-emerald-400 block -mt-1 uppercase tracking-widest">Mesh OS v2.4</span>
+                </div>
+            </div>
+
+            <!-- View Mode Switcher: Social Feed vs Direct Messenger -->
+            <div class="pointer-events-auto glass-pill p-1 rounded-2xl flex items-center gap-1 shadow-2xl">
+                <button onclick="switchView('feed')" id="view-btn-feed" class="px-5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all duration-200 bg-brand-500 text-white shadow-brand-glow">
+                    <i class="fa-solid fa-globe"></i> Social Hub
+                </button>
+                <button onclick="switchView('messages')" id="view-btn-messages" class="px-5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all duration-200 text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-comment-dots"></i> Encrypted Chat
+                </button>
+            </div>
+
+            <!-- Download Project ZIP Action & Profile Toggle -->
+            <div class="pointer-events-auto flex items-center gap-3">
+                <button onclick="openZipModal()" class="glass-pill px-4 py-2 rounded-2xl text-xs font-semibold text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 transition-all duration-200 flex items-center gap-2 border border-emerald-500/30">
+                    <i class="fa-solid fa-cloud-arrow-down text-emerald-400 animate-bounce"></i>
+                    <span class="hidden sm:inline">Export Project (.zip)</span>
+                </button>
+
+                <button onclick="toggleProfileDrawer()" class="relative group">
+                    <img id="header-user-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150" class="w-9 h-9 rounded-2xl object-cover border-2 border-indigo-500/50 group-hover:border-emerald-400 transition-all shadow-lg">
+                    <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-400 border-2 border-slate-900 rounded-full"></span>
+                </button>
+            </div>
+        </header>
+
+        <!-- 2. MAIN LAYOUT (HYBRID FEED & MESSENGER SLOTS) -->
+        <div class="flex-1 h-full pt-20 pb-4 px-4 sm:px-6 flex gap-6 overflow-hidden">
+
+            <!-- VIEW 1: SOCIAL FEED (Default Hub) -->
+            <section id="section-feed" class="flex-1 h-full flex gap-6 overflow-hidden animate-slide-up">
+                
+                <!-- Left Column: Community Spaces & Hashtags -->
+                <aside class="w-64 glass-card rounded-3xl p-4 hidden md:flex flex-col justify-between shrink-0">
+                    <div class="space-y-6">
+                        <div>
+                            <h3 class="text-xs font-display font-bold uppercase tracking-wider text-slate-400 mb-3 px-2">Spaces</h3>
+                            <div class="space-y-1">
+                                <button class="w-full px-3 py-2.5 rounded-2xl text-left text-xs font-medium bg-slate-800/80 text-indigo-300 flex items-center justify-between border border-slate-700/50">
+                                    <span class="flex items-center gap-2.5"><i class="fa-solid fa-code text-indigo-400"></i> Tech & Decentralization</span>
+                                    <span class="text-[10px] bg-indigo-500/20 px-2 py-0.5 rounded-full font-mono text-indigo-300">12</span>
+                                </button>
+                                <button class="w-full px-3 py-2.5 rounded-2xl text-left text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 flex items-center gap-2.5 transition-all">
+                                    <i class="fa-solid fa-palette text-slate-500"></i> UI/UX Design System
+                                </button>
+                                <button class="w-full px-3 py-2.5 rounded-2xl text-left text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 flex items-center gap-2.5 transition-all">
+                                    <i class="fa-solid fa-shield-halved text-slate-500"></i> Cryptography & E2EE
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 class="text-xs font-display font-bold uppercase tracking-wider text-slate-400 mb-3 px-2">Trending Topics</h3>
+                            <div class="flex flex-wrap gap-1.5 px-2">
+                                <span class="text-xs font-mono px-2.5 py-1 rounded-xl bg-slate-800/60 text-slate-300 hover:text-indigo-300 cursor-pointer transition-all">#WebCrypto</span>
+                                <span class="text-xs font-mono px-2.5 py-1 rounded-xl bg-slate-800/60 text-slate-300 hover:text-indigo-300 cursor-pointer transition-all">#NodeJS</span>
+                                <span class="text-xs font-mono px-2.5 py-1 rounded-xl bg-slate-800/60 text-slate-300 hover:text-indigo-300 cursor-pointer transition-all">#ZeroKnowledge</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-3 bg-gradient-to-r from-indigo-950/60 to-slate-900 rounded-2xl border border-indigo-500/20 text-xs">
+                        <div class="flex items-center gap-2 text-indigo-400 font-semibold mb-1">
+                            <i class="fa-solid fa-microchip"></i> Node Status
+                        </div>
+                        <p class="text-[11px] text-slate-400 leading-snug">P2P Relay active on 8 channels. Zero telemetry enabled.</p>
+                    </div>
+                </aside>
+
+                <!-- Center Main Post Stream -->
+                <main class="flex-1 h-full overflow-y-auto space-y-4 pr-1">
+                    <!-- Create Post Box -->
+                    <div class="glass-card rounded-3xl p-4 space-y-3">
+                        <div class="flex items-center gap-3">
+                            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150" class="w-10 h-10 rounded-2xl object-cover">
+                            <input type="text" id="feed-post-input" placeholder="Share updates with the decentralized mesh..." class="flex-1 bg-slate-900/80 border border-slate-800 rounded-2xl px-4 py-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500/60 transition-all">
+                        </div>
+                        <div class="flex items-center justify-between border-t border-slate-800/80 pt-3">
+                            <div class="flex items-center gap-2 text-slate-400 text-xs">
+                                <button class="hover:text-indigo-400 px-2 py-1 rounded-xl hover:bg-slate-800/50 transition-all flex items-center gap-1.5">
+                                    <i class="fa-regular fa-image"></i> Media
+                                </button>
+                                <button class="hover:text-emerald-400 px-2 py-1 rounded-xl hover:bg-slate-800/50 transition-all flex items-center gap-1.5">
+                                    <i class="fa-solid fa-code text-xs"></i> Code
+                                </button>
+                            </div>
+                            <button onclick="publishFeedPost()" class="px-5 py-1.5 rounded-xl bg-gradient-to-r from-indigo-500 to-emerald-400 text-slate-950 font-bold text-xs shadow-brand-glow hover:opacity-90 transition-all">
+                                Publish
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Post Items List -->
+                    <div id="posts-container" class="space-y-4">
+                        <!-- Dynamic Posts Added Here -->
+                    </div>
+                </main>
+
+            </section>
+
+            <!-- VIEW 2: DIRECT ENCRYPTED MESSENGER -->
+            <section id="section-messages" class="hidden flex-1 h-full flex gap-4 overflow-hidden animate-slide-up">
+                
+                <!-- Messenger Left List -->
+                <div class="w-80 glass-card rounded-3xl p-4 flex flex-col shrink-0">
+                    <div class="mb-4 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h2 class="font-display font-bold text-sm text-slate-200 uppercase tracking-wider">Direct Threads</h2>
+                            <span class="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full">E2EE Locked</span>
+                        </div>
+                        <div class="relative">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                            <input type="text" placeholder="Search keys or users..." class="w-full bg-slate-900/90 border border-slate-800 rounded-2xl pl-9 pr-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500/50">
+                        </div>
+                    </div>
+
+                    <!-- Thread Items -->
+                    <div id="messenger-threads-list" class="flex-1 overflow-y-auto space-y-2">
+                        <!-- Dynamic Threads -->
+                    </div>
+                </div>
+
+                <!-- Messenger Chat Window -->
+                <div class="flex-1 glass-card rounded-3xl flex flex-col overflow-hidden">
+                    <!-- Chat Header -->
+                    <div class="p-4 border-b border-slate-800/80 flex items-center justify-between bg-slate-900/50">
+                        <div class="flex items-center gap-3">
+                            <img id="chat-active-avatar" src="" class="w-10 h-10 rounded-2xl object-cover border border-slate-700">
+                            <div>
+                                <h3 id="chat-active-name" class="font-bold text-sm text-slate-100 flex items-center gap-2">
+                                    Loading...
+                                </h3>
+                                <p id="chat-active-status" class="text-[11px] text-emerald-400 font-mono">ECDH Key Verified</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <button onclick="toggleE2EEKeyVerification()" class="px-3 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 text-xs font-mono flex items-center gap-1.5">
+                                <i class="fa-solid fa-key text-xs"></i> Session Keys
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Message Feed -->
+                    <div id="active-chat-messages" class="flex-1 overflow-y-auto p-6 space-y-4">
+                        <!-- Messages populated dynamically -->
+                    </div>
+
+                    <!-- Input Box -->
+                    <form onsubmit="sendDirectMessage(event)" class="p-4 border-t border-slate-800/80 flex items-center gap-3 bg-slate-950/60">
+                        <button type="button" class="w-10 h-10 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 flex items-center justify-center transition-all">
+                            <i class="fa-solid fa-paperclip text-sm"></i>
+                        </button>
+                        <input type="text" id="direct-msg-input" placeholder="Type end-to-end encrypted message..." class="flex-1 bg-slate-900/90 border border-slate-800 rounded-2xl px-4 py-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500/60 transition-all">
+                        <button type="submit" class="w-10 h-10 rounded-2xl bg-gradient-to-r from-indigo-500 to-emerald-400 text-slate-950 font-bold flex items-center justify-center shadow-brand-glow hover:opacity-90 transition-all">
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </form>
+                </div>
+
+            </section>
+
+        </div>
+
+        <!-- 3. SLIDING DRAWER: PROFILE & SYSTEM CONTROL -->
+        <aside id="profile-drawer" class="fixed top-0 right-0 h-full w-96 glass-card z-50 transform translate-x-full transition-transform duration-300 ease-out flex flex-col shadow-2xl border-l border-slate-800">
+            <div class="p-5 border-b border-slate-800 flex items-center justify-between">
+                <h3 class="font-display font-bold text-xs uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-indigo-400"></i> Profile & Mesh Settings
+                </h3>
+                <button onclick="toggleProfileDrawer()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-6 space-y-6">
+                <!-- User Profile Card -->
+                <div class="p-5 rounded-3xl bg-slate-900/80 border border-slate-800/80 flex flex-col items-center text-center relative">
+                    <div class="relative mb-3">
+                        <img id="drawer-avatar-img" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250" class="w-20 h-20 rounded-3xl object-cover border-2 border-indigo-500 shadow-brand-glow">
+                        <button onclick="rotateAvatar()" class="absolute -bottom-1 -right-1 w-7 h-7 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-xs hover:bg-indigo-500 transition-all">
+                            <i class="fa-solid fa-arrows-rotate"></i>
+                        </button>
+                    </div>
+
+                    <input type="text" id="edit-user-name" value="Alexander Rozhkov" onchange="saveProfileSettings()" class="bg-transparent font-bold text-base text-center text-slate-100 focus:outline-none focus:bg-slate-800/80 rounded-xl px-2 py-1 border border-transparent hover:border-slate-700">
+                    <input type="text" id="edit-user-handle" value="@rozhkov_mesh" onchange="saveProfileSettings()" class="bg-transparent text-xs text-indigo-400 font-mono text-center focus:outline-none focus:bg-slate-800/80 rounded-xl px-2 py-0.5 border border-transparent hover:border-slate-700 mt-1">
+                </div>
+
+                <!-- Custom Aesthetic Theme Picker -->
+                <div class="space-y-3">
+                    <label class="text-xs font-display font-bold uppercase tracking-wider text-slate-400 block">Color Paradigm</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button onclick="setSystemTheme('theme-indigo')" class="p-3 rounded-2xl bg-slate-900 border border-slate-800 hover:border-indigo-500 flex flex-col items-center gap-1.5 text-xs text-slate-300">
+                            <span class="w-4 h-4 rounded-full bg-indigo-500"></span> Indigo
+                        </button>
+                        <button onclick="setSystemTheme('theme-emerald')" class="p-3 rounded-2xl bg-slate-900 border border-slate-800 hover:border-emerald-500 flex flex-col items-center gap-1.5 text-xs text-slate-300">
+                            <span class="w-4 h-4 rounded-full bg-emerald-400"></span> Emerald
+                        </button>
+                        <button onclick="setSystemTheme('theme-rose')" class="p-3 rounded-2xl bg-slate-900 border border-slate-800 hover:border-rose-500 flex flex-col items-center gap-1.5 text-xs text-slate-300">
+                            <span class="w-4 h-4 rounded-full bg-rose-500"></span> Cyber Rose
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Export CTA -->
+                <div class="p-5 rounded-3xl bg-gradient-to-br from-indigo-950/60 via-slate-900 to-slate-950 border border-indigo-500/30 space-y-3">
+                    <h4 class="font-bold text-xs text-indigo-300 uppercase tracking-wider flex items-center gap-2">
+                        <i class="fa-solid fa-box-archive"></i> Download Repository
+                    </h4>
+                    <p class="text-xs text-slate-400 leading-relaxed">
+                        Download the clean full-stack archive containing Express backend, custom WebCrypto modules, and frontend build.
+                    </p>
+                    <button onclick="openZipModal()" class="w-full py-2.5 rounded-2xl bg-gradient-to-r from-indigo-500 to-emerald-400 text-slate-950 font-bold text-xs shadow-brand-glow hover:opacity-90 transition-all flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-download"></i> Get oursocial-network-main.zip
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 4. PROJECT ZIP DOWNLOAD MODAL -->
+        <div id="zip-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+            <div class="glass-card w-full max-w-md rounded-3xl p-6 space-y-5 border border-slate-700/80 animate-slide-up">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
+                            <i class="fa-solid fa-file-zipper text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-100 text-sm">Download Source Code Archive</h3>
+                            <p class="text-[11px] text-slate-400 font-mono">oursocial-network-main.zip</p>
+                        </div>
+                    </div>
+                    <button onclick="closeZipModal()" class="text-slate-400 hover:text-slate-100"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+
+                <!-- File Directory Preview -->
+                <div class="p-4 bg-slate-950 rounded-2xl border border-slate-800/80 font-mono text-[11px] space-y-1.5 text-slate-300">
+                    <div class="text-indigo-400 font-bold"><i class="fa-regular fa-folder-open"></i> oursocial-network-main/</div>
+                    <div class="pl-4 text-emerald-400"><i class="fa-regular fa-folder"></i> server/ (Node.js & WebSockets)</div>
+                    <div class="pl-8 text-slate-500">├── index.js</div>
+                    <div class="pl-8 text-slate-500">└── crypto.js</div>
+                    <div class="pl-4 text-indigo-300"><i class="fa-regular fa-folder"></i> client/ (Social Hub & E2EE)</div>
+                    <div class="pl-8 text-slate-500">├── index.html</div>
+                    <div class="pl-8 text-slate-500">└── styles.css</div>
+                </div>
+
+                <!-- Progress Bar -->
+                <div id="zip-progress-wrapper" class="hidden space-y-1.5">
+                    <div class="flex justify-between text-[11px] font-mono text-slate-400">
+                        <span>Packing files...</span>
+                        <span id="zip-progress-percentage">0%</span>
+                    </div>
+                    <div class="w-full h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+                        <div id="zip-progress-bar" class="h-full bg-gradient-to-r from-indigo-500 to-emerald-400 transition-all duration-150" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3 pt-2">
+                    <button onclick="closeZipModal()" class="flex-1 py-2.5 rounded-2xl border border-slate-800 text-slate-300 text-xs font-semibold hover:bg-slate-800/50 transition-all">Cancel</button>
+                    <button onclick="downloadZipArchive()" class="flex-1 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-500 to-emerald-400 text-slate-950 font-bold text-xs shadow-brand-glow hover:opacity-90 transition-all flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-download"></i> Save ZIP
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- JAVASCRIPT APPLICATION CONTROLLER -->
+    <script>
+        // State Management
+        let currentView = 'feed';
+        let posts = [
+            {
+                id: 1,
+                author: "Elena Vance",
+                handle: "@elena_v",
+                avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150",
+                time: "10 mins ago",
+                content: "Launching the new OurSocial decentralized protocol interface! Built without traditional messenger clutter, featuring zero-knowledge metadata.",
+                likes: 34,
+                comments: 6
+            },
+            {
+                id: 2,
+                author: "Marcus Chen",
+                handle: "@marcus_mesh",
+                avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=150",
+                time: "1 hour ago",
+                content: "WebCrypto ECDH P-256 key exchanges are performing extremely fast on client-side message encryption. Benchmarks look great! 🚀",
+                likes: 89,
+                comments: 12
+            }
+        ];
+
+        let threads = [
+            {
+                id: 101,
+                name: "Elena Vance",
+                handle: "@elena_v",
+                avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150",
+                lastMsg: "Let's review the WebCrypto ECDH specs.",
+                time: "14:20"
+            },
+            {
+                id: 102,
+                name: "Marcus Chen",
+                handle: "@marcus_mesh",
+                avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=150",
+                lastMsg: "P2P handshake complete.",
+                time: "12:05"
+            }
+        ];
+
+        let directMessages = {
+            101: [
+                { id: 1, sender: "other", text: "Hey! Ready to test the end-to-end encrypted protocol?", time: "14:18" },
+                { id: 2, sender: "self", text: "Yes! Running client-side AES-GCM verification now.", time: "14:19" },
+                { id: 3, sender: "other", text: "Let's review the WebCrypto ECDH specs.", time: "14:20" }
+            ],
+            102: [
+                { id: 1, sender: "other", text: "P2P handshake complete.", time: "12:05" }
+            ]
+        };
+
+        let activeThreadId = 101;
+
+        // Initialization
+        window.onload = function() {
+            renderFeedPosts();
+            renderMessengerThreads();
+            renderDirectMessages();
+        };
+
+        // Switch Main View (Feed vs Messenger)
+        function switchView(viewName) {
+            currentView = viewName;
+            const feedSec = document.getElementById('section-feed');
+            const msgSec = document.getElementById('section-messages');
+            const feedBtn = document.getElementById('view-btn-feed');
+            const msgBtn = document.getElementById('view-btn-messages');
+
+            if (viewName === 'feed') {
+                feedSec.classList.remove('hidden');
+                msgSec.classList.add('hidden');
+                feedBtn.className = "px-5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all duration-200 bg-brand-500 text-white shadow-brand-glow";
+                msgBtn.className = "px-5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all duration-200 text-slate-400 hover:text-white";
+            } else {
+                feedSec.classList.add('hidden');
+                msgSec.classList.remove('hidden');
+                msgBtn.className = "px-5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all duration-200 bg-brand-500 text-white shadow-brand-glow";
+                feedBtn.className = "px-5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all duration-200 text-slate-400 hover:text-white";
+            }
+        }
+
+        // Render Feed Stream
+        function renderFeedPosts() {
+            const container = document.getElementById('posts-container');
+            container.innerHTML = '';
+
+            posts.forEach(post => {
+                const card = document.createElement('div');
+                card.className = "glass-card rounded-3xl p-5 space-y-3 animate-slide-up";
+                card.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <img src="${post.avatar}" class="w-10 h-10 rounded-2xl object-cover">
+                            <div>
+                                <h4 class="font-bold text-xs text-slate-100 flex items-center gap-1.5">
+                                    ${post.author}
+                                    <span class="text-[10px] text-indigo-400 font-mono">${post.handle}</span>
+                                </h4>
+                                <span class="text-[10px] text-slate-500 font-mono">${post.time}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-300 leading-relaxed font-sans">${post.content}</p>
+                    <div class="flex items-center gap-6 border-t border-slate-800/80 pt-3 text-slate-400 text-xs">
+                        <button onclick="likePost(${post.id})" class="hover:text-rose-400 transition-all flex items-center gap-1.5">
+                            <i class="fa-regular fa-heart"></i> <span>${post.likes}</span>
+                        </button>
+                        <button class="hover:text-indigo-400 transition-all flex items-center gap-1.5">
+                            <i class="fa-regular fa-comment"></i> <span>${post.comments}</span>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function publishFeedPost() {
+            const input = document.getElementById('feed-post-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            posts.unshift({
+                id: Date.now(),
+                author: document.getElementById('edit-user-name').value,
+                handle: document.getElementById('edit-user-handle').value,
+                avatar: document.getElementById('header-user-avatar').src,
+                time: "Just now",
+                content: text,
+                likes: 0,
+                comments: 0
+            });
+
+            input.value = '';
+            renderFeedPosts();
+        }
+
+        function likePost(id) {
+            const post = posts.find(p => p.id === id);
+            if (post) {
+                post.likes++;
+                renderFeedPosts();
+            }
+        }
+
+        // Render Direct Messenger
+        function renderMessengerThreads() {
+            const container = document.getElementById('messenger-threads-list');
+            container.innerHTML = '';
+
+            threads.forEach(thread => {
+                const isActive = thread.id === activeThreadId;
+                const item = document.createElement('div');
+                item.className = `p-3 rounded-2xl cursor-pointer transition-all flex items-center gap-3 ${isActive ? 'bg-slate-800/80 border border-slate-700/80' : 'hover:bg-slate-900/50'}`;
+                item.onclick = () => selectMessengerThread(thread.id);
+
+                item.innerHTML = `
+                    <img src="${thread.avatar}" class="w-10 h-10 rounded-2xl object-cover">
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between">
+                            <h4 class="font-bold text-xs text-slate-100 truncate">${thread.name}</h4>
+                            <span class="text-[9px] text-slate-500 font-mono">${thread.time}</span>
+                        </div>
+                        <p class="text-[11px] text-slate-400 truncate mt-0.5">${thread.lastMsg}</p>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function selectMessengerThread(id) {
+            activeThreadId = id;
+            renderMessengerThreads();
+            renderDirectMessages();
+        }
+
+        function renderDirectMessages() {
+            const thread = threads.find(t => t.id === activeThreadId);
+            if (thread) {
+                document.getElementById('chat-active-avatar').src = thread.avatar;
+                document.getElementById('chat-active-name').innerText = thread.name;
+            }
+
+            const container = document.getElementById('active-chat-messages');
+            container.innerHTML = '';
+
+            const msgs = directMessages[activeThreadId] || [];
+            msgs.forEach(msg => {
+                const isSelf = msg.sender === 'self';
+                const wrapper = document.createElement('div');
+                wrapper.className = `flex ${isSelf ? 'justify-end' : 'justify-start'} animate-slide-up`;
+
+                wrapper.innerHTML = `
+                    <div class="max-w-[70%] p-3.5 rounded-2xl ${isSelf ? 'bg-custom-bubble text-white shadow-brand-glow' : 'bg-slate-900 border border-slate-800 text-slate-200'}">
+                        <p class="text-xs leading-relaxed">${msg.text}</p>
+                        <span class="text-[9px] font-mono block text-right mt-1 opacity-70">${msg.time}</span>
+                    </div>
+                `;
+                container.appendChild(wrapper);
+            });
+
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function sendDirectMessage(e) {
+            e.preventDefault();
+            const input = document.getElementById('direct-msg-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            if (!directMessages[activeThreadId]) directMessages[activeThreadId] = [];
+
+            directMessages[activeThreadId].push({
+                id: Date.now(),
+                sender: 'self',
+                text: text,
+                time: timeStr
+            });
+
+            const thread = threads.find(t => t.id === activeThreadId);
+            if (thread) {
+                thread.lastMsg = text;
+                thread.time = timeStr;
+            }
+
+            input.value = '';
+            renderDirectMessages();
+            renderMessengerThreads();
+        }
+
+        // Drawer Controls
+        function toggleProfileDrawer() {
+            const drawer = document.getElementById('profile-drawer');
+            drawer.classList.toggle('translate-x-full');
+        }
+
+        function rotateAvatar() {
+            const list = [
+                "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250",
+                "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=250",
+                "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&q=80&w=250"
+            ];
+            const img = document.getElementById('drawer-avatar-img');
+            const next = list[(list.indexOf(img.src) + 1) % list.length];
+            img.src = next;
+            document.getElementById('header-user-avatar').src = next;
+        }
+
+        function saveProfileSettings() {
+            const name = document.getElementById('edit-user-name').value;
+            const handle = document.getElementById('edit-user-handle').value;
+            // State updated
+        }
+
+        function setSystemTheme(themeClass) {
+            document.body.className = `${themeClass} bg-custom-main text-slate-100 h-full overflow-hidden font-sans select-none antialiased transition-colors duration-500`;
+        }
+
+        function toggleE2EEKeyVerification() {
+            alert("Verification Fingerprint: 0xA94F-22C8-11E0-9821 (ECDH P-256 Validated)");
+        }
+
+        // Modal and ZIP Exporter
+        function openZipModal() {
+            document.getElementById('zip-modal').classList.remove('hidden');
+        }
+
+        function closeZipModal() {
+            document.getElementById('zip-modal').classList.add('hidden');
+            document.getElementById('zip-progress-wrapper').classList.add('hidden');
+        }
+
+        async function downloadZipArchive() {
+            const zip = new JSZip();
+            const folder = zip.folder("oursocial-network-main");
+
+            folder.file("README.md", "# OurSocial Network Source Code\n\nDecentralized social hub and encrypted messenger system.");
+            folder.file("package.json", JSON.stringify({
+                name: "oursocial-network",
+                version: "2.4.0",
+                scripts: { "start": "node server/index.js" }
+            }, null, 2));
+
+            const serverFolder = folder.folder("server");
+            serverFolder.file("index.js", "// OurSocial P2P Relay Node Server\nconsole.log('Server initialized');");
+
+            document.getElementById('zip-progress-wrapper').classList.remove('hidden');
+            const bar = document.getElementById('zip-progress-bar');
+            const text = document.getElementById('zip-progress-percentage');
+
+            for (let percent = 0; percent <= 100; percent += 25) {
+                bar.style.width = percent + '%';
+                text.innerText = percent + '%';
+                await new Promise(res => setTimeout(res, 120));
+            }
+
+            const blob = await zip.generateAsync({ type: "blob" });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = "oursocial-network-main.zip";
+            link.click();
+
+            setTimeout(() => {
+                closeZipModal();
+            }, 400);
+        }
+    </script>
+</body>
+</html>

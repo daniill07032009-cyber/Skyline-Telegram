@@ -1,0 +1,19 @@
+{
+  "name": "Skyline — мессенджер",
+  "short_name": "Skyline",
+  "description": "Личные разговоры и контакты в Skyline.",
+  "lang": "ru",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#090d16",
+  "theme_color": "#090d16",
+  "icons": [
+    {
+      "src": "./skyline-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
