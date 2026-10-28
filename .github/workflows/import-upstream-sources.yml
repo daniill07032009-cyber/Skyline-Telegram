@@ -1,9 +1,6 @@
 name: Import upstream source trees
 
 on:
-  push:
-    branches:
-      - integration/telegram-skyline-foundation
   workflow_dispatch:
 
 permissions:
