@@ -5,6 +5,9 @@ on:
     branches:
       - main
       - integration/telegram-skyline-foundation
+  push:
+    branches:
+      - integration/telegram-skyline-foundation
   workflow_dispatch:
 
 permissions:
