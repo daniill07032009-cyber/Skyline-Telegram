@@ -49,3 +49,23 @@ Before the Android adapter subscribes, document the authentication payload used 
 7. Repeat the same test with the browser client to prove both clients share the same Skyline backend.
 
 Do not mark the milestone complete until the test is performed against the deployed Skyline backend and recorded in CI or a reproducible manual test report.
+
+## Android REST adapter foundation (2026-10-28)
+
+`apps/telegram-android/TMessagesProj/src/main/java/org/telegram/messenger/skyline/SkylineApiClient.java` provides asynchronous HTTPS calls for registration, username/email login, current-user lookup, contact list/search, direct-message history/send, group list/create, and group-message history/send.
+
+- The API base URL is injected into the client constructor and must be HTTPS; the adapter has no Telegram-host fallback.
+- Array responses are normalized to an object with an `items` array for the current callback interface.
+- Direct-message sends must contain a client-encrypted Skyline v3 or supported hybrid envelope; group-message sends must contain a supported Skyline v4 envelope. Never pass plaintext to these send methods.
+- Bearer tokens and passwords are not logged or persisted by this adapter.
+- Callbacks run on the adapter worker thread; callers must marshal UI updates to the Android main thread.
+- This adapter is a transport foundation only. It is not yet wired into Telegram's native login, chat list, or message composer, and it does not make Telegram MTProto conversations synchronize with Skyline accounts by itself.
+
+## Acceptance gates before claiming cross-client messaging works
+
+1. Wire the native login/session state to the Skyline token and profile without requiring a phone number.
+2. Replace or adapt the native conversation data source to Skyline user/group IDs rather than Telegram DC/MTProto identifiers.
+3. Use the same documented envelope and key lifecycle on Android and web.
+4. Verify two distinct Skyline accounts can register/login, exchange an encrypted direct message, and receive it on both web and Android.
+5. Test logout, expired token, offline/reconnect, pagination, duplicate event delivery, and unauthorized access.
+6. Do not mark secret chats production-ready until protocol selection, cross-platform test vectors, identity/key verification, and independent security review are complete.
