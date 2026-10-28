@@ -1,0 +1,123 @@
+name: Import upstream source trees
+
+on:
+  push:
+    branches:
+      - integration/telegram-skyline-foundation
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: import-upstream-sources-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  import:
+    name: Import Telegram Android and Skyline source
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out integration branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Skip if both source trees are already imported
+        id: existing
+        shell: bash
+        run: |
+          if [[ -f apps/telegram-android/TMessagesProj/build.gradle && -f apps/skyline-web/package.json && -f services/skyline-python-api/main.py ]]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Fetch pinned public upstream snapshots
+        if: steps.existing.outputs.present != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --no-checkout https://github.com/TelegramOrg/Telegram-Android.git "$RUNNER_TEMP/telegram-android"
+          git -C "$RUNNER_TEMP/telegram-android" fetch --depth=1 origin 3de37c8cfb039452be7398909461da6288babf15
+          git -C "$RUNNER_TEMP/telegram-android" checkout --detach 3de37c8cfb039452be7398909461da6288babf15
+          git -C "$RUNNER_TEMP/telegram-android" submodule update --init --recursive --depth=1
+
+          git clone --no-checkout https://github.com/Pisosisosisosisosi/oursocial-network.git "$RUNNER_TEMP/skyline"
+          git -C "$RUNNER_TEMP/skyline" fetch --depth=1 origin c642e6517c639a0f513d8fea440308413ffd7cb2
+          git -C "$RUNNER_TEMP/skyline" checkout --detach c642e6517c639a0f513d8fea440308413ffd7cb2
+
+      - name: Vendor Android source and Skyline apps/services
+        if: steps.existing.outputs.present != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p apps/telegram-android apps/skyline-web services/skyline-node-api services/skyline-python-api docs/upstream
+
+          # Copy the recursively checked-out Android source as regular files so the
+          # combined repository does not depend on nested gitlink paths.
+          rsync -a --delete \
+            --exclude='.git' --exclude='.gradle' --exclude='build' \
+            --exclude='node_modules' --exclude='dist' \
+            --exclude='TMessagesProj/config/release.keystore' \
+            "$RUNNER_TEMP/telegram-android/" apps/telegram-android/
+
+          # Preserve upstream submodule metadata for audit; the checked-out
+          # submodule contents are vendored into the Android source directory.
+          if [[ -f apps/telegram-android/.gitmodules ]]; then
+            cp apps/telegram-android/.gitmodules docs/upstream/telegram-android.gitmodules
+            rm apps/telegram-android/.gitmodules
+          fi
+
+          rsync -a --delete --exclude='.git' --exclude='node_modules' --exclude='dist' --exclude='build' \
+            "$RUNNER_TEMP/skyline/frontend/" apps/skyline-web/
+          rsync -a --delete --exclude='.git' --exclude='node_modules' --exclude='dist' --exclude='build' \
+            "$RUNNER_TEMP/skyline/backend/" services/skyline-node-api/
+          rsync -a --delete --exclude='.git' --exclude='__pycache__' --exclude='.pytest_cache' \
+            --exclude='.venv' --exclude='venv' \
+            "$RUNNER_TEMP/skyline/python-api/" services/skyline-python-api/
+
+          cp "$RUNNER_TEMP/skyline/README.md" docs/upstream/skyline-README.md
+          cp "$RUNNER_TEMP/skyline/render.yaml" docs/upstream/skyline-render.yaml
+
+          cat > docs/UPSTREAM_SNAPSHOTS.md <<'EOF'
+          # Vendored upstream snapshots
+
+          Imported by .github/workflows/import-upstream-sources.yml.
+
+          - Telegram Android: TelegramOrg/Telegram-Android at commit 3de37c8cfb039452be7398909461da6288babf15.
+          - Skyline: Pisosisosisosisosi/oursocial-network at commit c642e6517c639a0f513d8fea440308413ffd7cb2.
+
+          The Telegram Android source is licensed under GPL-2.0-or-later. Its .gitmodules
+          file is preserved in docs/upstream/telegram-android.gitmodules; submodule contents
+          are vendored as ordinary files under apps/telegram-android. The upstream dummy
+          release keystore is intentionally not copied.
+
+          This import is source vendoring only. It does not connect Telegram Android to the
+          Skyline API, does not imply feature parity, and does not produce a release APK.
+          Replace Telegram-specific network/service integrations with Skyline adapters before
+          distributing a build. Never add private keys, production secrets, or private API
+          credentials to the repository.
+          EOF
+
+      - name: Commit imported source trees
+        if: steps.existing.outputs.present != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps services docs/upstream
+          if git diff --cached --quiet; then
+            echo "No source changes to commit."
+            exit 0
+          fi
+          git commit -m "chore: vendor Telegram Android and Skyline source snapshots"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+
+      - name: Report already-imported source
+        if: steps.existing.outputs.present == 'true'
+        run: echo "Both source trees are already present; no import needed."
