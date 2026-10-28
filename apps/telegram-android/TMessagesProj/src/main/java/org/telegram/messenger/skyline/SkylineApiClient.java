@@ -144,8 +144,8 @@ public final class SkylineApiClient implements AutoCloseable {
      * to this method; the server rejects unencrypted direct-message payloads.
      */
     public void sendEncryptedDirectMessage(String receiverId, String encryptedEnvelope, String replyTo,
-        if (!hasToken(bearerToken, callback)) return;
                                            String bearerToken, Callback callback) {
+        if (!hasToken(bearerToken, callback)) return;
         JSONObject payload = new JSONObject();
         try {
             payload.put("receiverId", requireText(receiverId, "receiver id"));
@@ -168,8 +168,8 @@ public final class SkylineApiClient implements AutoCloseable {
     }
 
     public void createGroup(String title, String description, JSONArray memberIds,
-        if (!hasToken(bearerToken, callback)) return;
                             String bearerToken, Callback callback) {
+        if (!hasToken(bearerToken, callback)) return;
         JSONObject payload = new JSONObject();
         try {
             payload.put("title", requireText(title, "group title"));
@@ -183,8 +183,8 @@ public final class SkylineApiClient implements AutoCloseable {
     }
 
     public void getGroupMessages(String groupId, int limit, String beforeId,
-        if (!hasToken(bearerToken, callback)) return;
                                  String bearerToken, Callback callback) {
+        if (!hasToken(bearerToken, callback)) return;
         try {
             String group = requireText(groupId, "group id");
             int safeLimit = Math.max(1, Math.min(limit, 100));
@@ -200,8 +200,8 @@ public final class SkylineApiClient implements AutoCloseable {
 
     /** Sends an already-encrypted envelope to a Skyline group. */
     public void sendEncryptedGroupMessage(String groupId, String encryptedEnvelope,
-        if (!hasToken(bearerToken, callback)) return;
                                           String bearerToken, Callback callback) {
+        if (!hasToken(bearerToken, callback)) return;
         JSONObject payload = new JSONObject();
         try {
             payload.put("text", requireText(encryptedEnvelope, "encrypted envelope"));
