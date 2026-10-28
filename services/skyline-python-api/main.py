@@ -59,6 +59,34 @@ LOGIN_RATE_LIMIT = 20
 LOGIN_RATE_WINDOW_SECONDS = 300.0
 login_attempt_timestamps: dict[str, deque[float]] = defaultdict(deque)
 login_rate_lock = Lock()
+REGISTRATION_RATE_LIMIT = 10
+REGISTRATION_RATE_WINDOW_SECONDS = 3600.0
+registration_attempt_timestamps: dict[str, deque[float]] = defaultdict(deque)
+registration_rate_lock = Lock()
+
+
+def enforce_registration_rate_limit(request: Request) -> None:
+    client_ip = request.client.host if request.client else "unknown"
+    now = time.monotonic()
+    with registration_rate_lock:
+        timestamps = registration_attempt_timestamps[client_ip]
+        while timestamps and now - timestamps[0] >= REGISTRATION_RATE_WINDOW_SECONDS:
+            timestamps.popleft()
+        if len(timestamps) >= REGISTRATION_RATE_LIMIT:
+            retry_after = REGISTRATION_RATE_WINDOW_SECONDS - (now - timestamps[0])
+            raise HTTPException(
+                status_code=429,
+                detail="Too many registration attempts. Please wait before trying again.",
+                headers={"Retry-After": str(max(1, int(retry_after) + 1))},
+            )
+        timestamps.append(now)
+        if len(registration_attempt_timestamps) > 10_000:
+            stale_ips = [
+                ip for ip, entries in registration_attempt_timestamps.items()
+                if not entries or now - entries[-1] >= REGISTRATION_RATE_WINDOW_SECONDS
+            ]
+            for ip in stale_ips:
+                registration_attempt_timestamps.pop(ip, None)
 
 
 def enforce_login_rate_limit(request: Request) -> None:
@@ -128,9 +156,9 @@ app.include_router(group_management_router)
 
 class RegisterRequest(BaseModel):
     email: EmailStr
-    password: str = Field(min_length=6, max_length=128)
+    password: str = Field(min_length=8, max_length=128)
     username: str = Field(min_length=3, max_length=32, pattern=r"^[A-Za-z0-9_.-]+$")
-    verificationToken: str = Field(min_length=32, max_length=256)
+    verificationToken: str | None = Field(default=None, min_length=32, max_length=256)
 
 
 class SendEmailCodeRequest(BaseModel):
@@ -148,8 +176,9 @@ class VerifyEmailTokenRequest(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    email: EmailStr
-    password: str
+    email: EmailStr | None = None
+    username: str | None = Field(default=None, min_length=3, max_length=32, pattern=r"^[A-Za-z0-9_.-]+$")
+    password: str = Field(min_length=1, max_length=128)
 
 
 class UploadKeyRequest(BaseModel):
@@ -477,26 +506,33 @@ def readiness():
 # ---------- Auth ----------
 
 @app.post("/auth/register")
-def register(payload: RegisterRequest):
+def register(payload: RegisterRequest, request: Request):
+    enforce_registration_rate_limit(request)
     users = users_collection()
     email = str(payload.email).lower()
     username = payload.username.lower()
+    is_email_verified = False
 
     if users.find_one({"username": {"$regex": f"^{re.escape(username)}$", "$options": "i"}}):
         raise HTTPException(status_code=409, detail="Username already taken")
 
-    registration_token_hash = hashlib.sha256(payload.verificationToken.encode()).hexdigest()
-    verified_email_token = verified_email_tokens_collection().find_one_and_delete({
-        "email": email,
-        "tokenHash": registration_token_hash,
-        "expiresAt": {"$gt": datetime.now(timezone.utc)},
-    })
-    if not verified_email_token:
-        raise HTTPException(status_code=400, detail="Подтвердите email перед регистрацией.")
+    # Email verification is optional by product decision. If a token is supplied,
+    # it must still be valid and one-time-use; invalid tokens are never ignored.
+    if payload.verificationToken:
+        registration_token_hash = hashlib.sha256(payload.verificationToken.encode()).hexdigest()
+        verified_email_token = verified_email_tokens_collection().find_one_and_delete({
+            "email": email,
+            "tokenHash": registration_token_hash,
+            "expiresAt": {"$gt": datetime.now(timezone.utc)},
+        })
+        if not verified_email_token:
+            raise HTTPException(status_code=400, detail="Invalid or expired email verification token.")
+        is_email_verified = True
+
     if users.find_one({"email": email}):
         raise HTTPException(
-            status_code=400,
-            detail="Не удалось создать аккаунт. Проверьте данные и попробуйте снова.",
+            status_code=409,
+            detail="Email or username is already taken.",
         )
 
     created_at = datetime.now(timezone.utc)
@@ -504,7 +540,7 @@ def register(payload: RegisterRequest):
         "email": email,
         "username": username,
         "displayName": username,
-        "isEmailVerified": True,
+        "isEmailVerified": is_email_verified,
         "passwordHash": hash_password(payload.password),
         "avatarUrl": "",
         "bio": "",
@@ -532,7 +568,7 @@ def register(payload: RegisterRequest):
             "email": email,
             "username": payload.username,
             "displayName": payload.username,
-            "isEmailVerified": True,
+            "isEmailVerified": is_email_verified,
             "isPremium": False,
             "premiumUntil": None,
             "coinsBalance": 0,
@@ -837,7 +873,15 @@ def verify_email_code(payload: VerifyEmailCodeRequest):
 def login(payload: LoginRequest, request: Request):
     enforce_login_rate_limit(request)
     users = users_collection()
-    user = users.find_one({"email": str(payload.email).lower()})
+    identifier = str(payload.username or payload.email or "").strip().lower()
+    if not identifier:
+        raise HTTPException(status_code=400, detail="Username or email is required")
+    user = users.find_one({
+        "$or": [
+            {"email": identifier},
+            {"username": identifier},
+        ],
+    })
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
