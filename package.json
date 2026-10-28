@@ -1,0 +1,17 @@
+{
+  "name": "skyline-android-preview",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Capacitor Android wrapper for the Skyline web messenger preview",
+  "scripts": {
+    "android:sync": "cap sync android",
+    "android:open": "cap open android"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.0.0"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/core": "^7.0.0"
+  }
+}
