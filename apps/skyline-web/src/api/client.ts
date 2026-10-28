@@ -1,7 +1,9 @@
 import axios from 'axios';
 
 // ЕДИНСТВЕННЫЙ СЕРВЕР (PYTHON)
-const PYTHON_API_URL = import.meta.env.VITE_API_URL || 'https://oursocial-python.onrender.com';
+const configuredApiUrl = import.meta.env.VITE_API_URL?.trim();
+// Never silently send Skyline credentials to the legacy OurSocial deployment.
+const PYTHON_API_URL = configuredApiUrl || (import.meta.env.DEV ? 'http://localhost:8000' : '');
 
 export const api = axios.create({
   baseURL: PYTHON_API_URL,
@@ -9,6 +11,9 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
+  if (!PYTHON_API_URL) {
+    return Promise.reject(new Error('Skyline API is not configured. Set VITE_API_URL to the HTTPS URL of the Skyline backend.'));
+  }
   const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
