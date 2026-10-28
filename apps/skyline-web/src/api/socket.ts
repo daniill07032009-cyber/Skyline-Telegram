@@ -1,14 +1,17 @@
 import { io, type Socket } from 'socket.io-client';
 
-const SOCKET_URL =
-  import.meta.env.VITE_SOCKET_URL ||
-  import.meta.env.VITE_API_URL ||
-  'https://oursocial-python.onrender.com';
+const configuredSocketUrl = import.meta.env.VITE_SOCKET_URL?.trim();
+const configuredApiUrl = import.meta.env.VITE_API_URL?.trim();
+// Never send Skyline realtime credentials to a legacy deployment by default.
+const SOCKET_URL = configuredSocketUrl || configuredApiUrl || (import.meta.env.DEV ? 'http://localhost:8000' : '');
 
 let socket: Socket | null = null;
 let socketToken: string | null = null;
 
 export function connectSocket(token?: string): Socket {
+  if (!SOCKET_URL) {
+    throw new Error('Skyline realtime API is not configured. Set VITE_SOCKET_URL or VITE_API_URL to the HTTPS URL of the Skyline backend.');
+  }
   const authToken = token || localStorage.getItem('token') || '';
 
   if (socket && socketToken !== authToken) {
