@@ -28,7 +28,7 @@ jobs:
       - name: Check import destinations
         run: |
           set -euo pipefail
-          for path in apps/telegram-android apps/skyline-web services/skyline-api; do
+          for path in apps/telegram-android apps/skyline-web services/skyline-api-node services/skyline-api-python; do
             if [ -e "$path" ]; then echo "Refusing to overwrite existing path: $path"; exit 1; fi
           done
       - name: Clone source repositories
@@ -41,11 +41,11 @@ jobs:
       - name: Copy sources without overwriting project docs
         run: |
           set -euo pipefail
-          mkdir -p apps/telegram-android apps/skyline-web services/skyline-api docs/source-import
+          mkdir -p apps/telegram-android apps/skyline-web services/skyline-api-node services/skyline-api-python docs/source-import
           tar -C /tmp/telegram-android --exclude=.git -cf - . | tar -C apps/telegram-android -xf -
           cp -a /tmp/skyline/frontend/. apps/skyline-web/
-          cp -a /tmp/skyline/backend/. services/skyline-api/
-          cp -a /tmp/skyline/python-api/. services/skyline-api/
+          cp -a /tmp/skyline/backend/. services/skyline-api-node/
+          cp -a /tmp/skyline/python-api/. services/skyline-api-python/
           printf 'Telegram-Android commit: %s\nSkyline source commit: %s\n' "$(cat /tmp/telegram-android-commit.txt)" "$(cat /tmp/skyline-commit.txt)" > docs/source-import/UPSTREAM_COMMITS.txt
           cp /tmp/telegram-android/LICENSE* docs/source-import/ 2>/dev/null || true
           cp /tmp/skyline/LICENSE* docs/source-import/ 2>/dev/null || true
