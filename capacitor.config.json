@@ -1,0 +1,10 @@
+{
+  "appId": "app.skyline.messenger",
+  "appName": "Skyline",
+  "webDir": "www",
+  "server": {
+    "url": "https://pisosisosisosisosi.github.io/oursocial-network/",
+    "cleartext": false,
+    "androidScheme": "https"
+  }
+}
