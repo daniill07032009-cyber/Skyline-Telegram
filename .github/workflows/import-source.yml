@@ -1,0 +1,75 @@
+name: Import Skyline and Telegram source
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_import:
+        description: 'Type IMPORT to copy source code into apps/ and services/'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: source-import-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  import:
+    if: github.event.inputs.confirm_import == 'IMPORT'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout integration branch
+        uses: actions/checkout@v4
+        with:
+          ref: integration/telegram-skyline-foundation
+          fetch-depth: 1
+      - name: Check import destinations
+        run: |
+          set -euo pipefail
+          for path in apps/telegram-android apps/skyline-web services/skyline-api; do
+            if [ -e "$path" ]; then echo "Refusing to overwrite existing path: $path"; exit 1; fi
+          done
+      - name: Clone source repositories
+        run: |
+          set -euo pipefail
+          git clone --depth 1 https://github.com/TelegramOrg/Telegram-Android.git /tmp/telegram-android
+          git clone --depth 1 https://github.com/Pisosisosisosisosi/oursocial-network.git /tmp/skyline
+          git -C /tmp/telegram-android rev-parse HEAD | tee /tmp/telegram-android-commit.txt
+          git -C /tmp/skyline rev-parse HEAD | tee /tmp/skyline-commit.txt
+      - name: Copy sources without overwriting project docs
+        run: |
+          set -euo pipefail
+          mkdir -p apps/telegram-android apps/skyline-web services/skyline-api docs/source-import
+          tar -C /tmp/telegram-android --exclude=.git -cf - . | tar -C apps/telegram-android -xf -
+          cp -a /tmp/skyline/frontend/. apps/skyline-web/
+          cp -a /tmp/skyline/backend/. services/skyline-api/
+          cp -a /tmp/skyline/python-api/. services/skyline-api/
+          printf 'Telegram-Android commit: %s\nSkyline source commit: %s\n' "$(cat /tmp/telegram-android-commit.txt)" "$(cat /tmp/skyline-commit.txt)" > docs/source-import/UPSTREAM_COMMITS.txt
+          cp /tmp/telegram-android/LICENSE* docs/source-import/ 2>/dev/null || true
+          cp /tmp/skyline/LICENSE* docs/source-import/ 2>/dev/null || true
+      - name: Record import manifest
+        run: |
+          set -euo pipefail
+          cat > docs/source-import/README.md <<'EOF'
+          # Source import manifest
+
+          The Android client source is copied from TelegramOrg/Telegram-Android.
+          The web and backend source are copied from Pisosisosisosisosi/oursocial-network.
+
+          This is a source import only. It does not mean that Telegram service dependencies
+          have been replaced, that the web and Android clients share a verified auth flow,
+          or that secret-chat E2EE has been implemented. Those require separate changes and tests.
+
+          Review all upstream license notices and distribution obligations before publishing builds.
+          EOF
+      - name: Commit imported source
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add apps services docs/source-import
+          if git diff --cached --quiet; then echo 'No source changes to commit'; exit 1; fi
+          git commit -m 'build: import Telegram Android and Skyline source trees'
+          git push origin HEAD:integration/telegram-skyline-foundation
