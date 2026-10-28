@@ -1,7 +1,10 @@
 package org.telegram.messenger.skyline;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.net.URLEncoder;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -103,6 +106,112 @@ public final class SkylineApiClient implements AutoCloseable {
         execute("GET", "/auth/me", null, bearerToken.trim(), callback);
     }
 
+    /** Returns the user's direct-chat list. Array responses are exposed as body.items. */
+    public void getContacts(String bearerToken, Callback callback) {
+        execute("GET", "/contacts", null, requireToken(bearerToken), callback);
+    }
+
+    /** Partial username/display-name search; the backend applies its own result limit. */
+    public void searchUsers(String query, String bearerToken, Callback callback) {
+        try {
+            String encoded = URLEncoder.encode(query == null ? "" : query.trim(), "UTF-8");
+            execute("GET", "/users/search?q=" + encoded, null, requireToken(bearerToken), callback);
+        } catch (Exception exception) {
+            callback.onError(0, "Could not encode user search");
+        }
+    }
+
+    /** Fetches a direct conversation. The server returns encrypted message envelopes. */
+    public void getDirectMessages(String peerUserId, int limit, String beforeId, String bearerToken, Callback callback) {
+        try {
+            String peer = requireText(peerUserId, "peer user id");
+            int safeLimit = Math.max(1, Math.min(limit, 100));
+            String path = "/messages/" + URLEncoder.encode(peer, "UTF-8") + "?limit=" + safeLimit;
+            if (beforeId != null && !beforeId.trim().isEmpty()) {
+                path += "&before=" + URLEncoder.encode(beforeId.trim(), "UTF-8");
+            }
+            execute("GET", path, null, requireToken(bearerToken), callback);
+        } catch (Exception exception) {
+            callback.onError(0, exception.getMessage() == null ? "Invalid conversation request" : exception.getMessage());
+        }
+    }
+
+    /**
+     * Sends an already-encrypted Skyline v4 envelope. Plaintext must never be passed
+     * to this method; the server rejects unencrypted direct-message payloads.
+     */
+    public void sendEncryptedDirectMessage(String receiverId, String encryptedEnvelope, String replyTo,
+                                           String bearerToken, Callback callback) {
+        JSONObject payload = new JSONObject();
+        try {
+            payload.put("receiverId", requireText(receiverId, "receiver id"));
+            payload.put("type", "text");
+            payload.put("text", requireText(encryptedEnvelope, "encrypted envelope"));
+            if (replyTo != null && !replyTo.trim().isEmpty()) {
+                payload.put("replyTo", replyTo.trim());
+            }
+        } catch (JSONException | IllegalArgumentException exception) {
+            callback.onError(0, exception.getMessage());
+            return;
+        }
+        execute("POST", "/messages", payload, requireToken(bearerToken), callback);
+    }
+
+    /** Lists groups for the current Skyline account. */
+    public void getGroups(String bearerToken, Callback callback) {
+        execute("GET", "/groups", null, requireToken(bearerToken), callback);
+    }
+
+    public void createGroup(String title, String description, JSONArray memberIds,
+                            String bearerToken, Callback callback) {
+        JSONObject payload = new JSONObject();
+        try {
+            payload.put("title", requireText(title, "group title"));
+            payload.put("description", description == null ? "" : description.trim());
+            payload.put("memberIds", memberIds == null ? new JSONArray() : memberIds);
+        } catch (JSONException | IllegalArgumentException exception) {
+            callback.onError(0, exception.getMessage());
+            return;
+        }
+        execute("POST", "/groups", payload, requireToken(bearerToken), callback);
+    }
+
+    public void getGroupMessages(String groupId, int limit, String beforeId,
+                                 String bearerToken, Callback callback) {
+        try {
+            String group = requireText(groupId, "group id");
+            int safeLimit = Math.max(1, Math.min(limit, 100));
+            String path = "/groups/" + URLEncoder.encode(group, "UTF-8") + "/messages?limit=" + safeLimit;
+            if (beforeId != null && !beforeId.trim().isEmpty()) {
+                path += "&before=" + URLEncoder.encode(beforeId.trim(), "UTF-8");
+            }
+            execute("GET", path, null, requireToken(bearerToken), callback);
+        } catch (Exception exception) {
+            callback.onError(0, exception.getMessage() == null ? "Invalid group request" : exception.getMessage());
+        }
+    }
+
+    /** Sends an already-encrypted envelope to a Skyline group. */
+    public void sendEncryptedGroupMessage(String groupId, String encryptedEnvelope,
+                                          String bearerToken, Callback callback) {
+        JSONObject payload = new JSONObject();
+        try {
+            payload.put("text", requireText(encryptedEnvelope, "encrypted envelope"));
+            payload.put("type", "text");
+        } catch (JSONException | IllegalArgumentException exception) {
+            callback.onError(0, exception.getMessage());
+            return;
+        }
+        execute("POST", "/groups/" + groupId + "/messages", payload, requireToken(bearerToken), callback);
+    }
+
+    private String requireToken(String bearerToken) {
+        if (bearerToken == null || bearerToken.trim().isEmpty()) {
+            throw new IllegalArgumentException("Skyline session token is required");
+        }
+        return bearerToken.trim();
+    }
+
     private void execute(
             String method,
             String path,
@@ -142,7 +251,13 @@ public final class SkylineApiClient implements AutoCloseable {
                 String response = readBounded(stream);
                 JSONObject body;
                 try {
-                    body = response.isEmpty() ? new JSONObject() : new JSONObject(response);
+                    if (response.isEmpty()) {
+                        body = new JSONObject();
+                    } else if (response.trim().startsWith("[")) {
+                        body = new JSONObject().put("items", new JSONArray(response));
+                    } else {
+                        body = new JSONObject(response);
+                    }
                 } catch (JSONException invalidJson) {
                     callback.onError(status, "Skyline API returned an invalid response");
                     return;
