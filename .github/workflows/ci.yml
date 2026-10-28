@@ -94,7 +94,14 @@ jobs:
             echo "Android sdkmanager was not found under $ANDROID_HOME/cmdline-tools" >&2
             exit 1
           fi
+          set +o pipefail
           yes | "$SDKMANAGER" --licenses >/dev/null
+          license_status=${PIPESTATUS[1]}
+          set -o pipefail
+          if [[ "$license_status" -ne 0 ]]; then
+            echo "sdkmanager --licenses failed with exit code $license_status" >&2
+            exit "$license_status"
+          fi
           "$SDKMANAGER" --install "platforms;android-36" "build-tools;36.0.0" "ndk;27.2.12479018" "cmake;3.22.1"
       - name: Compile upstream baseline debug APK
         run: ./gradlew --no-daemon --stacktrace :TMessagesProj_App:assembleAfatDebug
