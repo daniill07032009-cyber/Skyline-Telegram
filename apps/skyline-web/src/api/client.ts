@@ -57,8 +57,13 @@ export interface AuthResponse {
 }
 
 export const authApi = {
-  register: (email: string, password: string, username: string, verificationToken: string) =>
-    api.post<AuthResponse>('/auth/register', { email, password, username, verificationToken }),
+  register: (email: string, password: string, username: string, verificationToken?: string) =>
+    api.post<AuthResponse>('/auth/register', {
+      email,
+      password,
+      username,
+      ...(verificationToken ? { verificationToken } : {}),
+    }),
   sendEmailCode: (email: string) =>
     api.post<{
       status: string;
@@ -70,8 +75,12 @@ export const authApi = {
     api.post<{ status: string; message: string; registrationToken: string }>('/auth/verify-email-code', { email, code }),
   verifyEmailToken: (email: string, token: string) =>
     api.post<{ status: string; message: string; registrationToken: string }>('/auth/verify-email-token', { email, token }),
-  login: (email: string, password: string) =>
-    api.post<AuthResponse>('/auth/login', { email, password }),
+  login: (identifier: string, password: string) => {
+    const cleanIdentifier = identifier.trim();
+    return cleanIdentifier.includes('@')
+      ? api.post<AuthResponse>('/auth/login', { email: cleanIdentifier, password })
+      : api.post<AuthResponse>('/auth/login', { username: cleanIdentifier, password });
+  },
   me: () => api.get<User>('/auth/me'),
   searchUsers: (q: string) =>
     api.get<User[]>(`/users/search`, { params: { q } }),
