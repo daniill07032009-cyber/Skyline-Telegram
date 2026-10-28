@@ -1,6 +1,9 @@
 name: Import Skyline and Telegram source
 
 on:
+  push:
+    paths:
+      - '.github/workflows/import-source.yml'
   workflow_dispatch:
     inputs:
       confirm_import:
@@ -17,7 +20,7 @@ concurrency:
 
 jobs:
   import:
-    if: github.event.inputs.confirm_import == 'IMPORT'
+    if: github.event_name == 'push' || github.event.inputs.confirm_import == 'IMPORT'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout integration branch
