@@ -1,0 +1,97 @@
+name: Skyline multi-platform CI
+
+on:
+  push:
+    branches:
+      - main
+      - integration/telegram-skyline-foundation
+  pull_request:
+    branches:
+      - main
+      - integration/telegram-skyline-foundation
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: skyline-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    name: Web typecheck and production build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/skyline-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/skyline-web/package-lock.json
+      - run: npm ci
+      - run: npm run build
+
+  node-api:
+    name: Node API tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/skyline-node-api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: services/skyline-node-api/package-lock.json
+      - run: npm ci
+      - run: npm test
+
+  python-api:
+    name: Python API tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/skyline-python-api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: services/skyline-python-api/requirements.txt
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -r requirements.txt pytest
+      - run: python -m pytest -q
+
+  android:
+    name: Android debug APK compile
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: apps/telegram-android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK and NDK components
+        run: |
+          sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;27.2.12479018" "cmake;3.22.1"
+          yes | sdkmanager --licenses >/dev/null
+      - name: Compile upstream baseline debug APK
+        run: ./gradlew --no-daemon --stacktrace :TMessagesProj_App:assembleAfatDebug
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: skyline-android-baseline-debug
+          path: apps/telegram-android/TMessagesProj_App/build/outputs/apk/afat/debug/app.apk
+          if-no-files-found: error
+          retention-days: 7
