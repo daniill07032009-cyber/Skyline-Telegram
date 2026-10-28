@@ -103,6 +103,18 @@ jobs:
             exit "$license_status"
           fi
           "$SDKMANAGER" --install "platforms;android-36" "build-tools;36.0.0" "ndk;27.2.12479018" "cmake;3.22.1"
+      - name: Create ephemeral CI debug signing key
+        run: |
+          mkdir -p "$HOME/.android"
+          if [[ ! -f "$HOME/.android/debug.keystore" ]]; then
+            keytool -genkeypair -v \
+              -keystore "$HOME/.android/debug.keystore" \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US" -noprompt
+          fi
       - name: Compile upstream baseline debug APK
         run: ./gradlew --no-daemon --stacktrace :TMessagesProj_App:assembleAfatDebug
       - uses: actions/upload-artifact@v4
